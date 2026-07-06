@@ -1,0 +1,73 @@
+{
+  "proyecto": "cafestock-service",
+  "version": "0.0.1-SNAPSHOT",
+  "fecha": "2026-07-05",
+  "commit": "1ebcd95",
+  "spec": "specs/001-catalogo-productos-insumos/spec.md",
+  "veredicto_gate": "BLOQUEADO (quality-gate.py exit 2 · pilar Criterios)",
+  "tests": {
+    "comando": "./gradlew test jacocoTestReport --rerun-tasks",
+    "passed": 53,
+    "total": 53,
+    "coverage": 96.1,
+    "coverage_fuente": "build/reports/jacoco/test/jacocoTestReport.xml (INSTRUCTION: covered=1269, missed=51; ninguna clase < 80%)"
+  },
+  "security": {
+    "fuente": "Semgrep CLI 1.168.0 via uvx (p/default + p/security-audit + p/secrets, 31 archivos, 0 findings) + grep de secretos + revisión de controllers",
+    "critical": 0,
+    "high": 0,
+    "secrets": 0,
+    "hallazgos": [
+      {
+        "severidad": "medium",
+        "regla": "auth-missing (revisión manual)",
+        "archivo": "src/main/java/org/ups/cafestock/catalog/infrastructure/web/controller/ProductoController.java",
+        "linea": 21,
+        "nota": "Ningún endpoint exige autenticación: no hay spring-boot-starter-security ni SecurityFilterChain; aplica también a InsumoController.java:22. El spec no exige autenticación (rol único asumido); se reporta para triage, no bloquea."
+      },
+      {
+        "severidad": "medium",
+        "regla": "h2-console-enabled (revisión manual)",
+        "archivo": "src/main/resources/application.properties",
+        "linea": 15,
+        "nota": "spring.h2.console.enabled=true expone /h2-console sin protección; aceptable solo en dev, no debe llegar a producción."
+      }
+    ]
+  },
+  "criteria": [
+    { "id": "FR-001", "fuente": "spec.md · FR-001 / US1 escenario 1", "status": "cumple",
+      "evidencia": "CrearProductoUseCaseTest#debeCrearProductoCuandoNombreYPrecioSonValidos (asevera nombre, precio, estado ACTIVO y guardar(); CrearProductoUseCaseTest.java:30-46) + ProductoControllerCrearIT#debeCrearProductoYRetornar201 (201, $.nombre, $.estado=ACTIVO; ProductoControllerCrearIT.java:21-29). PASAN." },
+    { "id": "FR-002", "fuente": "spec.md · FR-002 / US1 escenario 1 (disponible de inmediato en pantalla de venta)", "status": "incumple",
+      "evidencia": "La única prueba (AltaProductoSteps#elProductoQuedaDisponibleParaMarcarseEnLaPantallaDeVenta, AltaProductoSteps.java:73-81) asevera anyMatch(estado==ACTIVO) sobre el listado: comprueba que existe ALGÚN producto activo, no que el recién creado ('Mocha') aparezca. Trivialmente verdadera con cualquier otro activo. Falta assert por identidad del producto creado." },
+    { "id": "FR-003", "fuente": "spec.md · FR-003 / US2 escenario 1", "status": "cumple",
+      "evidencia": "CrearInsumoUseCaseTest#debeCrearInsumoCuandoDatosSonValidos (nombre, unidadMedida=LITRO, stockInicial=20, ACTIVO, guardar(); CrearInsumoUseCaseTest.java:31-48) + InsumoControllerCrearIT#debeCrearInsumoYRetornar201 (InsumoControllerCrearIT.java:49-57). PASAN." },
+    { "id": "FR-004", "fuente": "spec.md · FR-004 / US2 escenario 1 (disponible para recetas y mínimos)", "status": "incumple",
+      "evidencia": "Mismo defecto que FR-002: AltaInsumoSteps#elInsumoQuedaDisponibleParaAsociarseARecetasYAMinimos (AltaInsumoSteps.java:69-77) asevera solo 201 y anyMatch(estado==ACTIVO); no comprueba que el insumo recién creado ('Vainilla') esté en el listado de activos." },
+    { "id": "FR-005", "fuente": "spec.md · FR-005 / US1-US2 escenarios 2-3", "status": "cumple",
+      "evidencia": "Nombre vacío: CrearProductoUseCaseTest#debeRechazarNombreVacio (CrearProductoUseCaseTest.java:49-57), EditarInsumoUseCaseTest#debeRechazarNombreVacioAlEditar (EditarInsumoUseCaseTest.java:76-85). Duplicado entre activos: CrearProductoUseCaseTest#debeRechazarNombreDuplicadoEntreActivos (:60-70), CrearInsumoUseCaseTest#debeRechazarNombreDuplicadoEntreActivos (:73-83), y end-to-end 409 en ProductoControllerCrearIT.java:41-52 e InsumoControllerCrearIT.java:69-80. PASAN. (Variante mayúsculas/espacios: ver EDGE-duplicado-mayusculas-espacios.)" },
+    { "id": "FR-006", "fuente": "spec.md · FR-006 / US1 escenario 2, US2 escenario 2", "status": "cumple",
+      "evidencia": "Precio > 0: CrearProductoUseCaseTest#debeRechazarPrecioMenorOIgualACero (0 y -1; CrearProductoUseCaseTest.java:72-83) + ProductoControllerCrearIT#debeRechazarPrecioInvalidoCon400 (:32-38). Stock >= 0: CrearInsumoUseCaseTest#debeRechazarStockNegativo (:61-70) + InsumoControllerCrearIT#debeRechazarStockInvalidoCon400 (:60-66); stock 0 aceptado en InsumoRepositoryAdapterIT.java:50. PASAN." },
+    { "id": "FR-007", "fuente": "spec.md · FR-007 / US3 escenario 1", "status": "cumple",
+      "evidencia": "EditarProductoUseCaseTest#debeEditarNombreYPrecioDeUnProductoExistente (EditarProductoUseCaseTest.java:32-48), EditarInsumoUseCaseTest#debeEditarNombreYUnidadDeMedidaDeUnInsumoExistente (:32-47); PATCH 200 en ProductoControllerEditarEstadoIT.java:37-47 e InsumoControllerEditarEstadoIT.java:37-47; errores (404, duplicado, inválido) en EditarProductoUseCaseTest.java:51-86 y ambos IT :78-84. PASAN." },
+    { "id": "FR-008", "fuente": "spec.md · FR-008 / US3 escenario 2", "status": "cumple",
+      "evidencia": "CambiarEstadoProductoUseCaseTest#debeDesactivarUnProductoExistente (CambiarEstadoProductoUseCaseTest.java:30-42) y CambiarEstadoInsumoUseCaseTest#debeDesactivarUnInsumoExistente (:31-43) aseveran INACTIVO vía guardar (baja lógica); el mismo id sigue existiendo y es reactivable (ProductoControllerEditarEstadoIT.java:50-75, InsumoControllerEditarEstadoIT.java:50-75). PASAN." },
+    { "id": "FR-009", "fuente": "spec.md · FR-009 / US3 escenario 3", "status": "cumple",
+      "evidencia": "CambiarEstadoProductoUseCaseTest#debeActivarUnProductoInactivoSinDuplicados (:45-60) y rechazo por duplicado al reactivar (:63-75); espejo insumo (CambiarEstadoInsumoUseCaseTest.java:46-76); ITs verifican reaparición en GET ?estado=ACTIVO (:66-74 en ambos) y Cucumber con asserts por id (EdicionBajaCatalogoSteps.java:114-144). PASAN." },
+    { "id": "FR-010", "fuente": "spec.md · FR-010 / US3 escenario 1", "status": "cumple",
+      "evidencia": "EdicionBajaCatalogoSteps#elCambioSeReflejaEnLasPantallasQueLoUsan: tras PATCH, GET inmediato devuelve el precio nuevo sin sincronización manual (EdicionBajaCatalogoSteps.java:106-112); cambios de estado se propagan de inmediato al listado (ProductoControllerEditarEstadoIT.java:59-74, InsumoControllerEditarEstadoIT.java:59-74). PASAN." },
+    { "id": "FR-011", "fuente": "spec.md · FR-011 / US3 y Edge Case de precio histórico / SC-003", "status": "incumple",
+      "evidencia": "No existe ninguna prueba que cree una venta, edite/desactive el producto y verifique que la venta conserva su precio original. Grep de 'venta' en src/test solo devuelve texto de features; el escenario 'sin afectar las ventas ya registradas' del feature no tiene step que lo asevere. Falta: prueba que registre venta con precio X, edite a Y y asevere que la venta histórica conserva X." },
+    { "id": "FR-012", "fuente": "spec.md · FR-012 / US3 escenario 2", "status": "cumple",
+      "evidencia": "doesNotContain(id) en GET ?estado=ACTIVO tras desactivar (ProductoControllerEditarEstadoIT.java:59-63, InsumoControllerEditarEstadoIT.java:59-63) y noneMatch por id en Cucumber (EdicionBajaCatalogoSteps.java:114-120,130-136); el registro sigue accesible por id (reactivación 200). La sub-cláusula de históricos de ventas/recetas está imputada a FR-011. PASAN." },
+    { "id": "EDGE-precio-historico", "fuente": "spec.md · Edge Cases (editar precio con ventas registradas)", "status": "incumple",
+      "evidencia": "Sin prueba: mismo hueco de FR-011; ninguna prueba en src/test toca ventas ni precios históricos." },
+    { "id": "EDGE-insumo-en-receta-activa", "fuente": "spec.md · Edge Cases (desactivar insumo asociado a receta activa: permitir + advertir)", "status": "incumple",
+      "evidencia": "Sin prueba: ningún test desactiva un insumo asociado a una receta ni asevera la advertencia prometida; los tests de desactivación (CambiarEstadoInsumoUseCaseTest.java:31-43, InsumoControllerEditarEstadoIT.java:50-75) no incluyen advertencia alguna en la respuesta." },
+    { "id": "EDGE-baja-sin-referencias", "fuente": "spec.md · Edge Cases (desactivar sin ventas ni recetas: sin restricciones)", "status": "cumple",
+      "evidencia": "CambiarEstadoProductoUseCaseTest#debeDesactivarUnProductoExistente (:30-42) y CambiarEstadoInsumoUseCaseTest#debeDesactivarUnInsumoExistente (:31-43) desactivan registros sin referencias con éxito; POST /desactivar → 200 (ProductoControllerEditarEstadoIT.java:55-57). PASAN." },
+    { "id": "EDGE-duplicado-mayusculas-espacios", "fuente": "spec.md · Edge Cases (duplicado con variaciones de mayúsculas/espacios)", "status": "incumple",
+      "evidencia": "Cobertura parcial: la normalización se demuestra indirectamente (CrearProductoUseCaseTest.java:60-70 con stub 'espresso'; ProductoRepositoryAdapterIT#debeDetectarExistenciaPorNombreNormalizadoYEstado, ProductoRepositoryAdapterIT.java:46-56). Pero no hay prueba end-to-end de duplicado con casing distinto (POST 'ESPRESSO' existiendo 'Espresso' → 409) ni ninguna prueba, en ninguna capa, del duplicado con espacios de borde; los ITs de duplicado usan nombre idéntico (ProductoControllerCrearIT.java:41-52, InsumoControllerCrearIT.java:69-80)." },
+    { "id": "EDGE-edicion-no-ajusta-stock", "fuente": "spec.md · Edge Cases (editar catálogo no ajusta stock en curso)", "status": "desconocido",
+      "evidencia": "El diseño lo sugiere (EditarInsumoUseCase.ejecutar(id, nombre, unidadMedida) no acepta stock; EditarInsumoUseCaseTest.java:42) pero ningún test asevera que stockInicial permanece intacto tras el PATCH ni que un intento de editar stock sea rechazado/ignorado. desconocido ≠ cumple." }
+  ]
+}

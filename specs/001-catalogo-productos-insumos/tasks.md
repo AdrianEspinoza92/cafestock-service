@@ -246,7 +246,30 @@ Con dos o más desarrolladores:
 - FR-011 y SC-003 (preservar ventas ya registradas ante ediciones/bajas)
   NO tienen tarea propia en esta historia: `Venta` está fuera de alcance
   (ver spec.md Assumptions) y hoy se cumplen solo porque este código nunca
-  toca esa tabla. Cuando se implemente la funcionalidad de Ventas, esa
+  toca esa tabla. `ProductoControllerEditarEstadoIT` incluye una prueba que
+  simula el momento de una venta (capturando el precio devuelto por la API)
+  y confirma que ese valor capturado no se ve afectado por una edición o
+  baja posteriores del producto, como aproximación verificable dentro del
+  alcance actual. Cuando se implemente la funcionalidad de Ventas, esa
   historia DEBE incluir una prueba de integración que edite/desactive un
-  Producto/Insumo con una Venta histórica asociada y verifique que el
+  Producto/Insumo con una Venta histórica real asociada y verifique que el
   registro de Venta no cambia.
+- El edge case "desactivar un insumo asociado a una receta activa" (spec.md
+  Edge Cases) exige advertir al usuario que la receta quedará afectada.
+  `Receta` está fuera de alcance de esta historia (no existe la entidad ni
+  el endpoint), por lo que NINGUNA prueba puede asertar honestamente esa
+  advertencia todavía — hacerlo sería simular un comportamiento que el
+  código no implementa. Lo verificable hoy (y cubierto por
+  `InsumoControllerEditarEstadoIT`/`CambiarEstadoInsumoUseCaseTest`) es que
+  desactivar un insumo siempre tiene éxito de forma incondicional. Cuando
+  se implemente la funcionalidad de Recetas, esa historia DEBE añadir la
+  prueba que verifica la advertencia al desactivar un insumo referenciado
+  por una receta activa.
+- Pendientes de seguridad (severidad media, no bloquean esta historia,
+  quedan para triage en una historia posterior): (1) los endpoints no
+  tienen autenticación/autorización — la spec asume un único rol
+  "encargado de compras" sin diferenciarlo de otros actores; (2)
+  `spring.h2.console.enabled=true` en `application.properties` es
+  apropiado para desarrollo/pruebas pero NO debe llegar a un despliegue de
+  producción — debe desactivarse o condicionarse a un perfil no productivo
+  antes de esa historia.

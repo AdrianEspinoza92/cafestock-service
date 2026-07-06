@@ -17,3 +17,8 @@ Feature: Alta de insumo
     Given que ya existe un insumo activo llamado "Leche entera"
     When intento dar de alta otro insumo con nombre "Leche entera" unidad de medida "LITRO" y stock inicial 10
     Then el sistema rechaza el alta de insumo por duplicado
+
+  Scenario: Rechazo de alta con nombre duplicado en mayúsculas y con espacios de borde
+    Given que ya existe un insumo activo llamado "Leche entera"
+    When intento dar de alta otro insumo con nombre "  LECHE ENTERA  " unidad de medida "LITRO" y stock inicial 10
+    Then el sistema rechaza el alta de insumo por duplicado

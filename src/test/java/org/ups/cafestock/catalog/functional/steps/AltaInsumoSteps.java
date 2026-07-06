@@ -28,6 +28,7 @@ public class AltaInsumoSteps {
     private TestRestTemplate restTemplate;
 
     private ResponseEntity<String> ultimaRespuestaCruda;
+    private String ultimoNombreIntentado;
 
     private String baseUrl() {
         return "http://localhost:" + port + "/api/v1";
@@ -36,6 +37,7 @@ public class AltaInsumoSteps {
     @Before
     public void limpiarEstado() {
         ultimaRespuestaCruda = null;
+        ultimoNombreIntentado = null;
     }
 
     @Given("que ya existe un insumo activo llamado {string}")
@@ -61,6 +63,7 @@ public class AltaInsumoSteps {
     }
 
     private void crearInsumo(String nombre, String unidad, double stock) {
+        ultimoNombreIntentado = nombre;
         CrearInsumoRequest request = new CrearInsumoRequest()
                 .nombre(nombre).unidadMedida(UnidadMedida.valueOf(unidad)).stockInicial(BigDecimal.valueOf(stock));
         ultimaRespuestaCruda = restTemplate.postForEntity(baseUrl() + "/insumos", request, String.class);
@@ -73,7 +76,10 @@ public class AltaInsumoSteps {
         ResponseEntity<Insumo[]> activos = restTemplate.getForEntity(
                 baseUrl() + "/insumos?estado=" + EstadoCatalogo.ACTIVO, Insumo[].class);
         List<Insumo> insumos = List.of(activos.getBody());
-        assertThat(insumos).anyMatch(i -> i.getEstado() == EstadoCatalogo.ACTIVO);
+        String nombreEsperado = ultimoNombreIntentado.trim();
+        assertThat(insumos)
+                .anyMatch(i -> i.getEstado() == EstadoCatalogo.ACTIVO
+                        && i.getNombre().equalsIgnoreCase(nombreEsperado));
     }
 
     @Then("el sistema rechaza la operación y no crea el insumo")

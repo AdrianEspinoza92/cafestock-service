@@ -44,6 +44,9 @@ class EditarInsumoUseCaseTest {
         // then
         assertThat(resultado.getNombre()).isEqualTo("Insumo Editado");
         assertThat(resultado.getUnidadMedida()).isEqualTo(UnidadMedida.KILOGRAMO);
+        // edge case "la edición no ajusta stock": stockInicial no forma parte de los
+        // parámetros de este caso de uso, así que debe permanecer intacto tras editar
+        assertThat(resultado.getStockInicial()).isEqualByComparingTo("5");
     }
 
     @Test

@@ -26,8 +26,8 @@ public class AltaProductoSteps {
     @Autowired
     private TestRestTemplate restTemplate;
 
-    private ResponseEntity<Producto> ultimaRespuesta;
     private ResponseEntity<String> ultimaRespuestaCruda;
+    private String ultimoNombreIntentado;
 
     private String baseUrl() {
         return "http://localhost:" + port + "/api/v1";
@@ -35,8 +35,8 @@ public class AltaProductoSteps {
 
     @Before
     public void limpiarEstado() {
-        ultimaRespuesta = null;
         ultimaRespuestaCruda = null;
+        ultimoNombreIntentado = null;
     }
 
     @Given("que soy encargado de compras")
@@ -66,6 +66,7 @@ public class AltaProductoSteps {
     }
 
     private void crearProducto(String nombre, double precio) {
+        ultimoNombreIntentado = nombre;
         CrearProductoRequest request = new CrearProductoRequest().nombre(nombre).precio(BigDecimal.valueOf(precio));
         ultimaRespuestaCruda = restTemplate.postForEntity(baseUrl() + "/productos", request, String.class);
     }
@@ -77,7 +78,10 @@ public class AltaProductoSteps {
         ResponseEntity<Producto[]> activos = restTemplate.getForEntity(
                 baseUrl() + "/productos?estado=" + EstadoCatalogo.ACTIVO, Producto[].class);
         List<Producto> productos = List.of(activos.getBody());
-        assertThat(productos).anyMatch(p -> p.getEstado() == EstadoCatalogo.ACTIVO);
+        String nombreEsperado = ultimoNombreIntentado.trim();
+        assertThat(productos)
+                .anyMatch(p -> p.getEstado() == EstadoCatalogo.ACTIVO
+                        && p.getNombre().equalsIgnoreCase(nombreEsperado));
     }
 
     @Then("el sistema rechaza la operación y no crea el producto")

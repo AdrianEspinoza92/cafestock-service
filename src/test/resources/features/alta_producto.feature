@@ -17,3 +17,8 @@ Feature: Alta de producto
     Given que ya existe un producto activo llamado "Espresso"
     When intento dar de alta otro producto con nombre "Espresso" y precio 1.80
     Then el sistema rechaza el alta por duplicado
+
+  Scenario: Rechazo de alta con nombre duplicado en mayúsculas y con espacios de borde
+    Given que ya existe un producto activo llamado "Espresso"
+    When intento dar de alta otro producto con nombre "  ESPRESSO  " y precio 1.80
+    Then el sistema rechaza el alta por duplicado
