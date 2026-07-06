@@ -1,0 +1,406 @@
+openapi: 3.0.3
+info:
+  title: Cafestock Catalog API
+  description: >
+    API para administrar el catálogo semilla de productos e insumos
+    (alta, edición, baja y reactivación) usado por el resto de la
+    aplicación (ventas, recetas, mínimos de stock).
+  version: 1.0.0
+servers:
+  - url: /api/v1
+tags:
+  - name: Productos
+  - name: Insumos
+
+paths:
+  /productos:
+    get:
+      operationId: listarProductos
+      tags: [Productos]
+      summary: Listar productos del catálogo
+      parameters:
+        - name: estado
+          in: query
+          required: false
+          description: Filtra por estado. Si se omite, devuelve todos.
+          schema:
+            $ref: '#/components/schemas/EstadoCatalogo'
+      responses:
+        '200':
+          description: Lista de productos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Producto'
+    post:
+      operationId: crearProducto
+      tags: [Productos]
+      summary: Dar de alta un producto nuevo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearProductoRequest'
+      responses:
+        '201':
+          description: Producto creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '400':
+          $ref: '#/components/responses/ErrorValidacion'
+        '409':
+          $ref: '#/components/responses/ErrorConflicto'
+
+  /productos/{id}:
+    get:
+      operationId: obtenerProducto
+      tags: [Productos]
+      summary: Obtener un producto por id
+      parameters:
+        - $ref: '#/components/parameters/ProductoId'
+      responses:
+        '200':
+          description: Producto encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '404':
+          $ref: '#/components/responses/ErrorNoEncontrado'
+    patch:
+      operationId: editarProducto
+      tags: [Productos]
+      summary: Editar nombre y/o precio de un producto existente
+      parameters:
+        - $ref: '#/components/parameters/ProductoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditarProductoRequest'
+      responses:
+        '200':
+          description: Producto actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '400':
+          $ref: '#/components/responses/ErrorValidacion'
+        '404':
+          $ref: '#/components/responses/ErrorNoEncontrado'
+        '409':
+          $ref: '#/components/responses/ErrorConflicto'
+
+  /productos/{id}/activar:
+    post:
+      operationId: activarProducto
+      tags: [Productos]
+      summary: Reactivar un producto previamente desactivado
+      parameters:
+        - $ref: '#/components/parameters/ProductoId'
+      responses:
+        '200':
+          description: Producto reactivado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '404':
+          $ref: '#/components/responses/ErrorNoEncontrado'
+
+  /productos/{id}/desactivar:
+    post:
+      operationId: desactivarProducto
+      tags: [Productos]
+      summary: Dar de baja (lógica) un producto existente
+      parameters:
+        - $ref: '#/components/parameters/ProductoId'
+      responses:
+        '200':
+          description: Producto desactivado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+        '404':
+          $ref: '#/components/responses/ErrorNoEncontrado'
+
+  /insumos:
+    get:
+      operationId: listarInsumos
+      tags: [Insumos]
+      summary: Listar insumos del catálogo
+      parameters:
+        - name: estado
+          in: query
+          required: false
+          description: Filtra por estado. Si se omite, devuelve todos.
+          schema:
+            $ref: '#/components/schemas/EstadoCatalogo'
+      responses:
+        '200':
+          description: Lista de insumos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Insumo'
+    post:
+      operationId: crearInsumo
+      tags: [Insumos]
+      summary: Dar de alta un insumo nuevo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearInsumoRequest'
+      responses:
+        '201':
+          description: Insumo creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Insumo'
+        '400':
+          $ref: '#/components/responses/ErrorValidacion'
+        '409':
+          $ref: '#/components/responses/ErrorConflicto'
+
+  /insumos/{id}:
+    get:
+      operationId: obtenerInsumo
+      tags: [Insumos]
+      summary: Obtener un insumo por id
+      parameters:
+        - $ref: '#/components/parameters/InsumoId'
+      responses:
+        '200':
+          description: Insumo encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Insumo'
+        '404':
+          $ref: '#/components/responses/ErrorNoEncontrado'
+    patch:
+      operationId: editarInsumo
+      tags: [Insumos]
+      summary: Editar nombre y/o unidad de medida de un insumo existente
+      parameters:
+        - $ref: '#/components/parameters/InsumoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditarInsumoRequest'
+      responses:
+        '200':
+          description: Insumo actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Insumo'
+        '400':
+          $ref: '#/components/responses/ErrorValidacion'
+        '404':
+          $ref: '#/components/responses/ErrorNoEncontrado'
+        '409':
+          $ref: '#/components/responses/ErrorConflicto'
+
+  /insumos/{id}/activar:
+    post:
+      operationId: activarInsumo
+      tags: [Insumos]
+      summary: Reactivar un insumo previamente desactivado
+      parameters:
+        - $ref: '#/components/parameters/InsumoId'
+      responses:
+        '200':
+          description: Insumo reactivado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Insumo'
+        '404':
+          $ref: '#/components/responses/ErrorNoEncontrado'
+
+  /insumos/{id}/desactivar:
+    post:
+      operationId: desactivarInsumo
+      tags: [Insumos]
+      summary: Dar de baja (lógica) un insumo existente
+      parameters:
+        - $ref: '#/components/parameters/InsumoId'
+      responses:
+        '200':
+          description: Insumo desactivado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Insumo'
+        '404':
+          $ref: '#/components/responses/ErrorNoEncontrado'
+
+components:
+  parameters:
+    ProductoId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    InsumoId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    ErrorValidacion:
+      description: Datos de entrada inválidos (nombre vacío, precio o stock fuera de rango)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ErrorConflicto:
+      description: Ya existe un registro activo con el mismo nombre
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ErrorNoEncontrado:
+      description: No existe un registro con el id indicado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    EstadoCatalogo:
+      type: string
+      enum: [ACTIVO, INACTIVO]
+
+    UnidadMedida:
+      type: string
+      enum: [UNIDAD, GRAMO, KILOGRAMO, MILILITRO, LITRO]
+
+    Error:
+      type: object
+      required: [codigo, mensaje]
+      properties:
+        codigo:
+          type: string
+          example: NOMBRE_DUPLICADO
+        mensaje:
+          type: string
+          example: Ya existe un producto activo con el nombre 'Espresso'
+
+    Producto:
+      type: object
+      required: [id, nombre, precio, estado]
+      properties:
+        id:
+          type: string
+          format: uuid
+        nombre:
+          type: string
+        precio:
+          type: number
+          format: decimal
+          minimum: 0
+          exclusiveMinimum: true
+        estado:
+          $ref: '#/components/schemas/EstadoCatalogo'
+        creadoEn:
+          type: string
+          format: date-time
+        actualizadoEn:
+          type: string
+          format: date-time
+
+    CrearProductoRequest:
+      type: object
+      required: [nombre, precio]
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+        precio:
+          type: number
+          format: decimal
+          minimum: 0
+          exclusiveMinimum: true
+
+    EditarProductoRequest:
+      type: object
+      description: Al menos uno de los dos campos debe enviarse.
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+        precio:
+          type: number
+          format: decimal
+          minimum: 0
+          exclusiveMinimum: true
+
+    Insumo:
+      type: object
+      required: [id, nombre, unidadMedida, stockInicial, estado]
+      properties:
+        id:
+          type: string
+          format: uuid
+        nombre:
+          type: string
+        unidadMedida:
+          $ref: '#/components/schemas/UnidadMedida'
+        stockInicial:
+          type: number
+          format: decimal
+          minimum: 0
+        estado:
+          $ref: '#/components/schemas/EstadoCatalogo'
+        creadoEn:
+          type: string
+          format: date-time
+        actualizadoEn:
+          type: string
+          format: date-time
+
+    CrearInsumoRequest:
+      type: object
+      required: [nombre, unidadMedida, stockInicial]
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+        unidadMedida:
+          $ref: '#/components/schemas/UnidadMedida'
+        stockInicial:
+          type: number
+          format: decimal
+          minimum: 0
+
+    EditarInsumoRequest:
+      type: object
+      description: Al menos uno de los dos campos debe enviarse.
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+        unidadMedida:
+          $ref: '#/components/schemas/UnidadMedida'
