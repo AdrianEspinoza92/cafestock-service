@@ -80,13 +80,34 @@ estado `ACTIVO` — se carga desde `src/main/resources/data.sql` en cada
 arranque. Ver [research.md](./research.md) §6 para la justificación de
 usar SQL versionado en vez de generación automática de esquema.
 
+## HistorialPrecioProducto (soporte de FR-011/SC-003)
+
+Registro append-only que persiste el precio de un `Producto` que queda
+reemplazado cada vez que se edita el precio vigente. No es la entidad
+`Venta` (fuera de alcance) sino el mínimo necesario para que FR-011/SC-003
+sean verificables: cualquier precio que quede aquí es inmutable ante
+ediciones posteriores del `Producto`, igual que lo estaría el precio
+copiado en un futuro registro de `Venta`.
+
+| Campo | Tipo | Reglas |
+|---|---|---|
+| `id` | UUID | Generado por el sistema. |
+| `productoId` | UUID | Referencia al `Producto` cuyo precio fue reemplazado. |
+| `precio` | Decimal | El precio que tenía el producto justo antes de la edición (no el nuevo). |
+| `registradoEn` | Timestamp | Momento en que el precio anterior dejó de estar vigente. |
+
+**Regla de negocio**: `EditarProductoUseCase` crea una entrada aquí
+únicamente cuando el precio efectivamente cambia (no en ediciones de solo
+nombre, ni en activar/desactivar). Nunca se actualiza ni se borra una
+entrada existente.
+
 ## Entidades referenciadas (fuera de alcance de esta historia)
 
 - **Venta**: registra, entre otros datos, el `productoId` y el precio al
   momento de la venta. No se crea, edita ni consulta desde esta
-  funcionalidad; se documenta únicamente para dejar explícito que sus
-  registros no deben verse afectados por ediciones o bajas de `Producto`
-  (FR-011).
+  funcionalidad. `HistorialPrecioProducto` (arriba) es el soporte mínimo
+  que permite verificar hoy que sus futuros registros no se verían
+  afectados por ediciones o bajas de `Producto` (FR-011).
 - **Receta**: asocia uno o más `Insumo` a un `Producto`. No se administra
   en esta historia; solo se garantiza que los `Insumo`/`Producto` activos
   quedan disponibles para que una futura funcionalidad de recetas los

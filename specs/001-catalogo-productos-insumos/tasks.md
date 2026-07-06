@@ -161,6 +161,21 @@ Proyecto backend único (Spring Boot, Gradle): `src/main/java/org/ups/cafestock/
 
 ---
 
+## Remediación post-implementación (hallazgos de quality-gate, 2ª ronda)
+
+**Purpose**: Corregir pruebas débiles/tautológicas y huecos de cobertura detectados por el gate de calidad tras T054, sin tocar la lógica de negocio ya implementada salvo donde el propio hallazgo lo exigía (FR-011)
+
+- [X] T055 [P] Corregir aserción trivial de FR-002 en `AltaProductoSteps.java` (verificaba "algún activo", no el creado): ahora compara por nombre del producto recién dado de alta
+- [X] T056 [P] Corregir aserción trivial de FR-004 en `AltaInsumoSteps.java` (mismo problema): ahora compara por nombre del insumo recién dado de alta
+- [X] T057 [US3] Implementar `HistorialPrecioProducto` (dominio), `HistorialPrecioProductoRepositoryPort`, entidad/repositorio/adaptador JPA (`producto_precio_historico` en `schema.sql`) e integrarlo en `EditarProductoUseCase` para persistir el precio reemplazado en cada edición — mínimo necesario para que FR-011/SC-003 sean verificables sin la entidad Venta (fuera de alcance)
+- [X] T058 [US3] Reemplazar la prueba tautológica de FR-011 (variable local) en `ProductoControllerEditarEstadoIT` por una que consulta el registro persistido en `producto_precio_historico`; añadir `EditarProductoUseCaseTest` casos que verifican que el historial se crea solo cuando el precio cambia
+- [X] T059 [P] Añadir escenarios end-to-end de duplicado con mayúsculas y espacios de borde (`alta_producto.feature`, `alta_insumo.feature`) reutilizando los steps existentes
+- [X] T060 [P] Añadir aserciones explícitas de que `stockInicial` permanece intacto tras `PATCH /insumos/{id}` (unit: `EditarInsumoUseCaseTest`; integración: `InsumoControllerEditarEstadoIT`)
+
+**Sin corregir (decisión de alcance, no defecto de prueba)**: el edge case "desactivar un insumo asociado a una receta activa" exige advertir sobre el impacto en la receta; `Receta` no existe en este código, así que ninguna prueba puede asertar esa advertencia sin fabricar comportamiento inexistente. Queda documentado como trabajo de la futura historia de Recetas (ver Notes).
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -243,28 +258,29 @@ Con dos o más desarrolladores:
 - Los tests son obligatorios en este proyecto (Constitución, Principio II) y deben fallar antes de implementar
 - Confirmar que `./gradlew check` pasa (incluye JaCoCo) antes de dar por cerrada cualquier historia
 - Evitar: tareas vagas, conflictos de archivo entre tareas [P], dependencias cruzadas entre historias que rompan su independencia (salvo la dependencia explícita y documentada de US3 sobre US1/US2)
-- FR-011 y SC-003 (preservar ventas ya registradas ante ediciones/bajas)
-  NO tienen tarea propia en esta historia: `Venta` está fuera de alcance
-  (ver spec.md Assumptions) y hoy se cumplen solo porque este código nunca
-  toca esa tabla. `ProductoControllerEditarEstadoIT` incluye una prueba que
-  simula el momento de una venta (capturando el precio devuelto por la API)
-  y confirma que ese valor capturado no se ve afectado por una edición o
-  baja posteriores del producto, como aproximación verificable dentro del
-  alcance actual. Cuando se implemente la funcionalidad de Ventas, esa
-  historia DEBE incluir una prueba de integración que edite/desactive un
-  Producto/Insumo con una Venta histórica real asociada y verifique que el
-  registro de Venta no cambia.
-- El edge case "desactivar un insumo asociado a una receta activa" (spec.md
-  Edge Cases) exige advertir al usuario que la receta quedará afectada.
-  `Receta` está fuera de alcance de esta historia (no existe la entidad ni
-  el endpoint), por lo que NINGUNA prueba puede asertar honestamente esa
-  advertencia todavía — hacerlo sería simular un comportamiento que el
-  código no implementa. Lo verificable hoy (y cubierto por
+- FR-011 y SC-003 (preservar ventas ya registradas ante ediciones/bajas):
+  `spec.md` fue enmendado (FR-011, SC-003, Edge Case de precio histórico,
+  Key Entities, Assumptions) para declarar explícitamente que, mientras
+  `Venta` no exista, esta historia satisface la promesa mediante
+  `HistorialPrecioProducto` — un registro append-only (tabla
+  `producto_precio_historico`) que `EditarProductoUseCase` persiste con el
+  precio reemplazado cada vez que el precio de un Producto cambia.
+  `ProductoControllerEditarEstadoIT` verifica ese registro **persistido en
+  base de datos** (no una variable local) y confirma que sobrevive intacto
+  a ediciones y bajas posteriores; `EditarProductoUseCaseTest` verifica a
+  nivel unitario que el historial se crea solo cuando el precio realmente
+  cambia. Cuando se implemente Ventas, esa historia debe consumir
+  `HistorialPrecioProductoRepositoryPort` (o el precio vigente al momento
+  de la venta) al registrar cada venta.
+- El edge case "desactivar un insumo asociado a una receta activa" fue
+  declarado explícitamente **fuera de alcance** en `spec.md` (Edge Cases y
+  Assumptions): `Receta` no existe en esta historia, así que no hay
+  asociación Insumo-Receta que verificar ni advertencia que emitir. Lo
+  verificable hoy (y cubierto por
   `InsumoControllerEditarEstadoIT`/`CambiarEstadoInsumoUseCaseTest`) es que
   desactivar un insumo siempre tiene éxito de forma incondicional. Cuando
-  se implemente la funcionalidad de Recetas, esa historia DEBE añadir la
-  prueba que verifica la advertencia al desactivar un insumo referenciado
-  por una receta activa.
+  se implemente la funcionalidad de Recetas, esa historia DEBE definir e
+  implementar la advertencia y su prueba correspondiente.
 - Pendientes de seguridad (severidad media, no bloquean esta historia,
   quedan para triage en una historia posterior): (1) los endpoints no
   tienen autenticación/autorización — la spec asume un único rol

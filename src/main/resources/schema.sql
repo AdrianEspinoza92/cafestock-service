@@ -24,3 +24,14 @@ CREATE TABLE IF NOT EXISTS insumo (
     actualizado_en TIMESTAMP NOT NULL,
     CONSTRAINT uq_insumo_nombre_estado UNIQUE (nombre_normalizado, estado)
 );
+
+-- FR-011/SC-003: registro append-only del precio reemplazado en cada edición
+-- de Producto. Permite verificar que un precio ya persistido (equivalente al
+-- que capturaría una futura Venta) no se ve afectado por ediciones
+-- posteriores, sin necesitar la entidad Venta (fuera de alcance de esta historia).
+CREATE TABLE IF NOT EXISTS producto_precio_historico (
+    id UUID PRIMARY KEY,
+    producto_id UUID NOT NULL REFERENCES producto(id),
+    precio DECIMAL(19, 2) NOT NULL,
+    registrado_en TIMESTAMP NOT NULL
+);

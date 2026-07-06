@@ -7,6 +7,11 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.ups.cafestock.catalog.domain.model.HistorialPrecioProducto;
+import org.ups.cafestock.catalog.domain.port.HistorialPrecioProductoRepositoryPort;
+
+import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -21,6 +26,9 @@ class ProductoControllerEditarEstadoIT {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private HistorialPrecioProductoRepositoryPort historialPrecioProductoRepositoryPort;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -87,26 +95,24 @@ class ProductoControllerEditarEstadoIT {
      * FR-011 / SC-003: una venta ya registrada debe conservar el precio con el
      * que se vendió aunque el producto se edite o desactive después. Esta
      * historia no administra la entidad Venta (fuera de alcance, ver
-     * spec.md Assumptions), así que aquí se simula el momento de la venta
-     * capturando el precio devuelto por la API en ese instante -tal como lo
-     * haría el futuro registro de Venta al copiar el valor- y se verifica
-     * que esa copia no se ve afectada por una edición o baja posteriores.
+     * spec.md Assumptions), pero SÍ persiste cada precio reemplazado en
+     * `producto_precio_historico` (ver EditarProductoUseCase). Esta prueba
+     * verifica ese registro PERSISTIDO en la base de datos real -no una
+     * variable local- y confirma que sobrevive intacto a ediciones y bajas
+     * posteriores del producto.
      */
     @Test
-    void debePreservarElPrecioCapturadoAlMomentoDeUnaVentaSimuladaTrasEditarYDesactivarElProducto() throws Exception {
-        // given: se crea el producto y se "vende" (se captura su precio en ese instante,
-        // leído de la propia respuesta de creación, tal como lo haría un futuro registro de Venta)
+    void debePreservarEnLaBaseDeDatosElPrecioReemplazadoTrasEditarYDesactivarElProducto() throws Exception {
+        // given: se crea el producto con precio 1.00
         MvcResult creado = mockMvc.perform(post("/productos")
                         .contentType("application/json")
                         .content("{\"nombre\":\"Producto Precio Historico IT\",\"precio\":1.00}"))
                 .andExpect(status().isCreated())
                 .andReturn();
-        var productoCreado = objectMapper.readTree(creado.getResponse().getContentAsString());
-        String id = productoCreado.get("id").asText();
-        java.math.BigDecimal precioAlMomentoDeLaVentaSimulada =
-                new java.math.BigDecimal(productoCreado.get("precio").asText());
+        UUID id = UUID.fromString(
+                objectMapper.readTree(creado.getResponse().getContentAsString()).get("id").asText());
 
-        // when: el producto se edita y luego se desactiva
+        // when: se edita el precio a 5.00 (reemplaza el 1.00 original) y luego se desactiva
         mockMvc.perform(patch("/productos/" + id)
                         .contentType("application/json")
                         .content("{\"precio\":5.00}"))
@@ -116,18 +122,18 @@ class ProductoControllerEditarEstadoIT {
         mockMvc.perform(post("/productos/" + id + "/desactivar"))
                 .andExpect(status().isOk());
 
-        // then: la venta simulada conserva su propio precio capturado en el momento de la venta
-        assertThat(precioAlMomentoDeLaVentaSimulada).isEqualByComparingTo("1.00");
+        // then: el registro PERSISTIDO del precio reemplazado (1.00) sigue existiendo
+        // y no fue alterado por la edición ni por la baja posteriores
+        List<HistorialPrecioProducto> historial = historialPrecioProductoRepositoryPort.listarPorProducto(id);
+        assertThat(historial).hasSize(1);
+        assertThat(historial.get(0).getPrecio()).isEqualByComparingTo("1.00");
 
-        // y el precio actual del producto (consultado de nuevo) sí refleja el nuevo valor,
-        // demostrando que ambos valores son independientes una vez capturados
+        // y el precio vigente del producto sí refleja el valor nuevo, confirmando que
+        // ambos registros (histórico y vigente) son independientes una vez persistidos
         MvcResult productoActual = mockMvc.perform(get("/productos/" + id))
                 .andExpect(status().isOk())
                 .andReturn();
-        java.math.BigDecimal precioActual = new java.math.BigDecimal(
-                objectMapper.readTree(productoActual.getResponse().getContentAsString())
-                        .get("precio").asText());
-        assertThat(precioActual).isEqualByComparingTo("5.00");
-        assertThat(precioActual).isNotEqualByComparingTo(precioAlMomentoDeLaVentaSimulada);
+        assertThat(objectMapper.readTree(productoActual.getResponse().getContentAsString())
+                .get("precio").decimalValue()).isEqualByComparingTo("5.00");
     }
 }

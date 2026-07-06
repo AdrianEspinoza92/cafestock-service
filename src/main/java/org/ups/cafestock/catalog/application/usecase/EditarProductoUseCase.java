@@ -5,7 +5,9 @@ import org.ups.cafestock.catalog.domain.exception.NombreDuplicadoException;
 import org.ups.cafestock.catalog.domain.exception.RegistroNoEncontradoException;
 import org.ups.cafestock.catalog.domain.exception.ValorInvalidoException;
 import org.ups.cafestock.catalog.domain.model.EstadoCatalogo;
+import org.ups.cafestock.catalog.domain.model.HistorialPrecioProducto;
 import org.ups.cafestock.catalog.domain.model.Producto;
+import org.ups.cafestock.catalog.domain.port.HistorialPrecioProductoRepositoryPort;
 import org.ups.cafestock.catalog.domain.port.ProductoRepositoryPort;
 
 import java.math.BigDecimal;
@@ -16,9 +18,12 @@ import java.util.UUID;
 public class EditarProductoUseCase {
 
     private final ProductoRepositoryPort productoRepositoryPort;
+    private final HistorialPrecioProductoRepositoryPort historialPrecioProductoRepositoryPort;
 
-    public EditarProductoUseCase(ProductoRepositoryPort productoRepositoryPort) {
+    public EditarProductoUseCase(ProductoRepositoryPort productoRepositoryPort,
+                                  HistorialPrecioProductoRepositoryPort historialPrecioProductoRepositoryPort) {
         this.productoRepositoryPort = productoRepositoryPort;
+        this.historialPrecioProductoRepositoryPort = historialPrecioProductoRepositoryPort;
     }
 
     public Producto ejecutar(UUID id, String nombre, BigDecimal precio) {
@@ -45,7 +50,20 @@ public class EditarProductoUseCase {
                     "Ya existe un producto activo con el nombre '" + nuevoNombre + "'");
         }
 
+        BigDecimal precioAnterior = producto.getPrecio();
+        boolean precioCambio = precioAnterior.compareTo(nuevoPrecio) != 0;
+
         producto.editar(nuevoNombre, nuevoPrecio);
-        return productoRepositoryPort.guardar(producto);
+        Producto guardado = productoRepositoryPort.guardar(producto);
+
+        if (precioCambio) {
+            // FR-011/SC-003: se preserva el precio reemplazado para que cualquier
+            // venta ya registrada con ese precio pueda seguir consultándolo, aun
+            // cuando el precio vigente del producto cambie en adelante.
+            historialPrecioProductoRepositoryPort.guardar(
+                    HistorialPrecioProducto.registrar(guardado.getId(), precioAnterior));
+        }
+
+        return guardado;
     }
 }
